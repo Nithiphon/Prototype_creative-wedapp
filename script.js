@@ -4,13 +4,11 @@ const API_BASE_URL = "https://script.google.com/macros/s/AKfycbzOMYM-tWQKwMIiccU
 
 let state = {
   lot: "A1",
-  spot: null,
   spots: {},
-  currentBooking: null,
-  pendingCancelCode: null
+  highlightSpotId: null
 };
 
-// --- จัดการหน้าจอ (Screens) ---
+// --- จัดการการสลับหน้าจอ ---
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   const target = document.getElementById(id);
@@ -22,7 +20,7 @@ document.querySelectorAll("[data-back]").forEach(b => {
   b.onclick = () => showScreen(b.dataset.back);
 });
 
-// --- ระบบแจ้งเตือน Toast ---
+// --- Toast แจ้งเตือนสั้นๆ ---
 function showToast(message) {
   const toast = document.getElementById("toast");
   toast.textContent = message;
@@ -30,57 +28,42 @@ function showToast(message) {
   setTimeout(() => toast.classList.remove("show"), 2800);
 }
 
-// --- ตรวจสอบตั๋วที่บันทึกไว้ในเครื่อง (LocalStorage) ---
-function checkSavedBooking() {
-  const saved = localStorage.getItem("parking_booking");
-  const card = document.getElementById("homeActiveBooking");
-  if (saved) {
-    try {
-      state.currentBooking = JSON.parse(saved);
-      document.getElementById("briefSpot").textContent = `${state.currentBooking.lot} — ${state.currentBooking.spot}`;
-      document.getElementById("briefTime").textContent = `${state.currentBooking.date} • ${state.currentBooking.time}`;
-      card.style.display = "block";
-    } catch(e) {
-      localStorage.removeItem("parking_booking");
-      card.style.display = "none";
-    }
-  } else {
-    card.style.display = "none";
-  }
-}
-
-// ดูตั๋วปัจจุบันจากหน้าแรก
-document.getElementById("btnViewCurrentBooking").onclick = () => {
-  if (!state.currentBooking) return;
-  displayTicket(state.currentBooking);
-};
-
 // --- ดึงข้อมูลช่องจอด (Fetch Spots) ---
 async function fetchSpots() {
   const statusEl = document.getElementById("gridStatus");
-  statusEl.textContent = "กำลังโหลดข้อมูลช่องจอด...";
+  if (statusEl) statusEl.textContent = "กำลังโหลดข้อมูลสถานะ...";
+
   try {
     const res = await fetch(`${API_BASE_URL}?action=spots`);
     const data = await res.json();
     state.spots = data;
     renderGrid();
-    updateSlotCounts();
-    statusEl.textContent = "";
+    updateSummary();
+    if (statusEl) statusEl.textContent = "";
   } catch (e) {
-    statusEl.textContent = "⚠️ ไม่สามารถเชื่อมต่อฐานข้อมูลได้";
+    if (statusEl) statusEl.textContent = "⚠️ ไม่สามารถเชื่อมต่อฐานข้อมูลได้";
     showToast("เชื่อมต่อข้อมูลไม่สำเร็จ");
   }
 }
 
-function updateSlotCounts() {
+// อัปเดตตัวเลขสรุปช่องว่าง
+function updateSummary() {
+  let totalFree = 0;
+
   ["A1", "B1"].forEach(lot => {
     const list = state.spots[lot] || [];
     const freeCount = list.filter(s => s.status === "free").length;
+    totalFree += freeCount;
+
     const countEl = document.getElementById(`count${lot}`);
     if (countEl) countEl.textContent = `ว่าง ${freeCount}`;
   });
+
+  const totalEl = document.getElementById("totalFreeCount");
+  if (totalEl) totalEl.textContent = `${totalFree} ช่อง`;
 }
 
+// วาดผังช่องจอดในแต่ละชั้น
 function renderGrid() {
   const grid = document.getElementById("spotGrid");
   grid.innerHTML = "";
@@ -93,60 +76,80 @@ function renderGrid() {
 
   list.forEach(sp => {
     const el = document.createElement("div");
-    el.className = "spot " + (sp.status === "free" ? "free" : "taken");
-    el.innerHTML = `<span>${sp.id}</span>`;
-    if (sp.status === "free") {
-      el.onclick = () => selectSpot(sp.id);
+    const isFree = sp.status === "free";
+    el.className = "spot " + (isFree ? "free" : "taken");
+
+    // ถ้าเป็นช่องที่ระบบแนะนำจากการสแกน ให้ใส่เอฟเฟกต์กระพริบ
+    if (state.highlightSpotId === sp.id) {
+      el.classList.add("highlight");
     }
+
+    el.innerHTML = `<span>${sp.id}</span>`;
+    el.onclick = () => openSpotModal(sp.id, sp.status);
     grid.appendChild(el);
   });
 }
 
-function selectSpot(spotId) {
-  state.spot = spotId;
-  document.getElementById("fLotSpot").value = `${state.lot} - ${spotId}`;
-  document.getElementById("fLotSpotLabel").textContent = `ลานจอด ${state.lot} — ช่อง ${spotId}`;
-  showScreen("s3");
+// Modal แสดงรายละเอียดเมื่อกดที่ช่องจอด
+const spotModal = document.getElementById("spotModal");
+function openSpotModal(spotId, status) {
+  const isFree = status === "free";
+  document.getElementById("modalTitle").textContent = `ลานจอด ${state.lot} — ช่อง ${spotId}`;
+  
+  const badge = document.getElementById("modalStatusBadge");
+  badge.className = `status-chip ${isFree ? 'free' : 'taken'}`;
+  badge.textContent = isFree ? "สถานะ: ว่าง พร้อมเข้าจอด" : "สถานะ: มีรถจอดอยู่";
+
+  document.getElementById("modalDesc").textContent = isFree 
+    ? "ช่องนี้กำลังว่างอยู่ คุณสามารถขับรถเข้าจอดที่จุดนี้ได้เลย"
+    : "ช่องนี้มีรถจอดอยู่แล้ว กรุณาเลือกช่องสีเขียวช่องอื่น";
+
+  document.getElementById("modalIcon").textContent = isFree ? "✅" : "🚗";
+  spotModal.classList.add("active");
 }
 
-// สลับแถบชั้นลานจอดรถ
+document.getElementById("btnModalClose").onclick = () => {
+  spotModal.classList.remove("active");
+};
+
+// สลับดูชั้น A1 / B1
 document.querySelectorAll(".floor-pill").forEach(tab => {
   tab.onclick = () => {
     document.querySelectorAll(".floor-pill").forEach(t => t.classList.remove("active"));
     tab.classList.add("active");
     state.lot = tab.dataset.lot;
+    state.highlightSpotId = null; // ล้างไฮไลต์เมื่อเปลี่ยนชั้น
     renderGrid();
   };
 });
 
-document.getElementById("btnRefresh").onclick = fetchSpots;
+document.getElementById("btnRefresh").onclick = () => {
+  fetchSpots();
+  showToast("อัปเดตสถานะล่าสุดแล้ว");
+};
+
 document.getElementById("btnBrowse").onclick = () => {
+  state.highlightSpotId = null;
   showScreen("s2");
   fetchSpots();
 };
 
-// เลือกช่วงเวลา (Time Chips)
-document.querySelectorAll(".time-chip").forEach(chip => {
-  chip.onclick = () => {
-    document.querySelectorAll(".time-chip").forEach(c => c.classList.remove("active"));
-    chip.classList.add("active");
-    document.getElementById("fTime").value = chip.dataset.time;
-  };
-});
-
-// --- สแกนตำแหน่ง (Geolocation) ---
+// --- สแกนหาช่องว่างด้วย Geolocation (GPS) ---
 document.getElementById("btnLocate").onclick = async () => {
   const statusEl = document.getElementById("locStatus");
   if (!navigator.geolocation) {
     showToast("อุปกรณ์นี้ไม่รองรับการระบุตำแหน่ง");
     return;
   }
-  statusEl.textContent = "กำลังค้นหาตำแหน่งและคำนวณที่จอด...";
-  
+
+  statusEl.textContent = "กำลังค้นหาตำแหน่งและคำนวณที่จอดใกล้ตัว...";
+
   navigator.geolocation.getCurrentPosition(
     async () => {
       await fetchSpots();
       let best = null;
+
+      // หาช่องว่างแรกที่พบ
       for (const lot in state.spots) {
         const free = state.spots[lot].find(s => s.status === "free");
         if (free) {
@@ -154,10 +157,11 @@ document.getElementById("btnLocate").onclick = async () => {
           break;
         }
       }
+
       if (best) {
         state.lot = best.lot;
-        state.spot = best.spot;
-        statusEl.textContent = "พบที่จอดที่ใกล้และสะดวกที่สุดแล้ว ✅";
+        state.highlightSpotId = best.spot;
+        statusEl.textContent = "พบที่จอดที่สะดวกที่สุดแล้ว ✅";
         document.getElementById("suggestCard").style.display = "block";
         document.getElementById("suggestText").textContent = `ลานจอด ${best.lot} — ช่อง ${best.spot}`;
       } else {
@@ -167,203 +171,22 @@ document.getElementById("btnLocate").onclick = async () => {
     },
     () => {
       statusEl.textContent = "ไม่สามารถเข้าถึงตำแหน่งได้ กรุณาเปิด GPS";
-      showToast("กรุณาอนุญาตการเข้าถึงตำแหน่ง GPS");
+      showToast("กรุณาเปิดการเข้าถึงตำแหน่ง GPS");
     }
   );
 };
 
+// ปุ่มนำทางไปยังผังลานจอดที่มีช่องแนะนำ
 document.getElementById("goToSuggested").onclick = () => {
-  document.getElementById("fLotSpot").value = `${state.lot} - ${state.spot}`;
-  document.getElementById("fLotSpotLabel").textContent = `ลานจอด ${state.lot} — ช่อง ${state.spot}`;
-  showScreen("s3");
+  // สลับแท็บชั้นให้ตรงกับช่องที่แนะนำ
+  document.querySelectorAll(".floor-pill").forEach(t => {
+    t.classList.toggle("active", t.dataset.lot === state.lot);
+  });
+  showScreen("s2");
+  renderGrid();
 };
 
-// --- จองช่องจอด (Booking) ---
-document.getElementById("btnBook").onclick = async () => {
-  const date = document.getElementById("fDate").value;
-  const time = document.getElementById("fTime").value;
-  const statusEl = document.getElementById("bookStatus");
-  const btn = document.getElementById("btnBook");
-
-  if (!date) {
-    showToast("กรุณาเลือกวันที่จอง");
-    return;
-  }
-
-  btn.disabled = true;
-  statusEl.textContent = "กำลังดำเนินการบันทึกข้อมูล...";
-
-  try {
-    const res = await fetch(API_BASE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        action: "book",
-        lot: state.lot,
-        spot: state.spot,
-        date,
-        time
-      })
-    });
-    const data = await res.json();
-    btn.disabled = false;
-
-    if (data.success) {
-      const bookingData = {
-        bookingCode: data.bookingCode,
-        lot: state.lot,
-        spot: state.spot,
-        date,
-        time
-      };
-      // บันทึกตั๋วลงเครื่อง LocalStorage
-      localStorage.setItem("parking_booking", JSON.stringify(bookingData));
-      state.currentBooking = bookingData;
-      displayTicket(bookingData);
-      showToast("🎉 จองที่จอดรถสำเร็จ!");
-    } else {
-      statusEl.textContent = "❌ " + (data.error || "จองไม่สำเร็จ ช่องนี้อาจเพิ่งถูกจองไป");
-    }
-  } catch (e) {
-    btn.disabled = false;
-    statusEl.textContent = "⚠️ ไม่สามารถเชื่อมต่อกับระบบได้";
-  }
-};
-
-function displayTicket(data) {
-  document.getElementById("cCode").textContent = data.bookingCode;
-  document.getElementById("cSpot").textContent = `${data.lot} - ${data.spot}`;
-  document.getElementById("cDate").textContent = data.date;
-  document.getElementById("cTime").textContent = data.time;
-  showScreen("s4");
-}
-
-// คัดลอกรหัสตั๋ว
-document.getElementById("btnCopyCode").onclick = () => {
-  const code = document.getElementById("cCode").textContent;
-  if (!code || code === "—") return;
-  navigator.clipboard.writeText(code);
-  showToast("📋 คัดลอกรหัสเรียบร้อยแล้ว");
-};
-
-// --- ระบบยกเลิกการจอง (Cancellation System) ---
-const cancelModal = document.getElementById("cancelModal");
-
-function openCancelModal(bookingCode) {
-  if (!bookingCode || bookingCode === "—") {
-    showToast("ไม่พบรหัสการจอง");
-    return;
-  }
-  state.pendingCancelCode = bookingCode;
-  cancelModal.classList.add("active");
-}
-
-document.getElementById("btnCancelModalClose").onclick = () => {
-  cancelModal.classList.remove("active");
-  state.pendingCancelCode = null;
-};
-
-// กดยกเลิกจากหน้าตั๋ว
-document.getElementById("btnCancelFromTicket").onclick = () => {
-  const code = document.getElementById("cCode").textContent;
-  openCancelModal(code);
-};
-
-// ยืนยันยกเลิกใน Modal
-document.getElementById("btnConfirmCancel").onclick = async () => {
-  const code = state.pendingCancelCode;
-  if (!code || code === "—") return;
-
-  const btnConfirm = document.getElementById("btnConfirmCancel");
-  btnConfirm.textContent = "กำลังยกเลิก...";
-  btnConfirm.disabled = true;
-
-  try {
-    const res = await fetch(API_BASE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        action: "cancel",
-        bookingCode: code
-      })
-    });
-    const data = await res.json();
-    btnConfirm.textContent = "ยืนยันยกเลิก";
-    btnConfirm.disabled = false;
-    cancelModal.classList.remove("active");
-
-    if (data.success) {
-      // ลบจากเครื่องเฉพาะเมื่อรหัสตรงกับตั๋วของเครื่องนี้
-      if (state.currentBooking && state.currentBooking.bookingCode === code) {
-        localStorage.removeItem("parking_booking");
-        state.currentBooking = null;
-      }
-      
-      showToast("✅ ยกเลิกการจองเรียบร้อยแล้ว");
-      checkSavedBooking();
-      fetchSpots(); // รีเฟรชผังช่องจอดใหม่ทันที
-      showScreen("s1");
-    } else {
-      showToast("❌ " + (data.error || "ไม่สามารถยกเลิกได้"));
-    }
-  } catch (e) {
-    btnConfirm.textContent = "ยืนยันยกเลิก";
-    btnConfirm.disabled = false;
-    showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ");
-  }
-};
-
-// --- หน้าค้นหา / จัดการตั๋ว (Lookup) ---
-document.getElementById("btnOpenLookup").onclick = () => {
-  showScreen("s5");
-  document.getElementById("lookupResultCard").style.display = "none";
-  document.getElementById("lookupStatus").textContent = "";
-  if (state.currentBooking) {
-    document.getElementById("inputLookupCode").value = state.currentBooking.bookingCode;
-  }
-};
-
-document.getElementById("btnDoLookup").onclick = () => {
-  const code = document.getElementById("inputLookupCode").value.trim();
-  const statusEl = document.getElementById("lookupStatus");
-  const resultCard = document.getElementById("lookupResultCard");
-
-  if (!code) {
-    showToast("กรุณากรอกรหัสการจอง");
-    return;
-  }
-
-  // หากตรงกับตั๋วในเครื่อง
-  if (state.currentBooking && state.currentBooking.bookingCode === code) {
-    document.getElementById("lookupSpot").textContent = `ลานจอด ${state.currentBooking.lot} — ช่อง ${state.currentBooking.spot}`;
-    document.getElementById("lookupDetails").textContent = `วันที่ ${state.currentBooking.date} • เวลา ${state.currentBooking.time}`;
-    resultCard.style.display = "block";
-    statusEl.textContent = "";
-  } else {
-    document.getElementById("lookupSpot").textContent = `รหัสการจอง: ${code}`;
-    document.getElementById("lookupDetails").textContent = "พร้อมดำเนินการยกเลิก";
-    resultCard.style.display = "block";
-    statusEl.textContent = "";
-  }
-};
-
-document.getElementById("btnCancelFromLookup").onclick = () => {
-  const code = document.getElementById("inputLookupCode").value.trim();
-  openCancelModal(code);
-};
-
-document.getElementById("btnHome").onclick = () => {
-  checkSavedBooking();
-  showScreen("s1");
-};
-
-// ตั้งค่าเริ่มต้นเมื่อเปิดหน้าเว็บ
+// โหลดข้อมูลอัตโนมัติเมื่อเปิดเว็บ
 window.addEventListener("DOMContentLoaded", () => {
-  const today = new Date().toISOString().split("T")[0];
-  const dateInput = document.getElementById("fDate");
-  if (dateInput) {
-    dateInput.value = today;
-    dateInput.min = today;
-  }
-  checkSavedBooking();
+  fetchSpots();
 });
