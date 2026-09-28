@@ -2,82 +2,226 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Find Me ที่จอดรถ</title>
-  <!-- เชื่อมต่อไฟล์ CSS -->
+  <!-- Google Fonts: Prompt -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- SCREEN 1: HOME / FIND ME -->
-  <div class="screen active" id="s1">
-    <h1>Find Me ที่จอดรถ 🅿️</h1>
-    <p class="sub">หาที่จอดรถว่างในมหาวิทยาลัยแบบเรียลไทม์</p>
-    <div class="loc-box">
-      <div id="locStatus">กดปุ่มด้านล่างเพื่อค้นหาที่จอดที่ใกล้ตำแหน่งคุณที่สุด</div>
-    </div>
-    <div class="card" id="suggestCard" style="display:none">
-      <label>ที่ว่างแนะนำ</label>
-      <h2 id="suggestText" style="text-align:left"></h2>
-      <button class="btn-primary" id="goToSuggested">เลือกที่จอดนี้</button>
-    </div>
-    <button class="btn-primary" id="btnLocate" style="margin-bottom:10px">📍 เปิดตำแหน่ง</button>
-    <button class="btn-ghost" id="btnBrowse">ดูผังที่จอดทั้งหมด</button>
-  </div>
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
 
-  <!-- SCREEN 2: FLOOR GRID -->
-  <div class="screen" id="s2">
-    <div class="top"><button class="back" data-back="s1">←</button><h2 style="margin:0">เลือกที่จอดที่ใกล้ที่สุด</h2></div>
-    <div class="lots">
-      <div class="lot-tab active" data-lot="A1">ชั้น A1</div>
-      <div class="lot-tab" data-lot="B1">ชั้น B1</div>
-    </div>
-    <div class="legend">
-      <span><span class="dot" style="background:var(--green)"></span>ว่าง</span>
-      <span><span class="dot" style="background:var(--red)"></span>เต็ม</span>
-    </div>
-    <div class="grid" id="spotGrid"></div>
-    <div class="status" id="gridStatus"></div>
-    <button class="btn-ghost" id="btnRefresh" style="margin-top:16px">🔄 รีเฟรช</button>
-  </div>
-
-  <!-- SCREEN 3: BOOKING FORM -->
-  <div class="screen" id="s3">
-    <div class="top"><button class="back" data-back="s2">←</button><h2 style="margin:0">เลือกพื้นที่จอด</h2></div>
-    <div class="card">
-      <div class="field"><label>ลานจอดที่จอง</label><input id="fLotSpot" readonly></div>
-      <div class="field"><label>เวลาที่จอง</label>
-        <select id="fTime">
-          <option>08.00 - 10.00</option>
-          <option>10.00 - 12.00</option>
-          <option>12.00 - 14.00</option>
-          <option>14.00 - 16.00</option>
-          <option>16.00 - 18.00</option>
-        </select>
+  <!-- Modal ยืนยันการยกเลิก -->
+  <div id="cancelModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-icon">⚠️</div>
+      <h3>ต้องการยกเลิกการจอง?</h3>
+      <p>เมื่อยกเลิกแล้ว ช่องจอดรถนี้จะถูกปล่อยให้ผู้อื่นสามารถจองได้ทันที</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="btnCancelModalClose">ไม่ยกเลิก</button>
+        <button class="btn-danger" id="btnConfirmCancel">ยืนยันยกเลิก</button>
       </div>
-      <div class="field"><label>วันที่จอง</label><input type="date" id="fDate"></div>
     </div>
-    <button class="btn-primary" id="btnBook">จองทันที</button>
-    <div class="status" id="bookStatus"></div>
   </div>
 
-  <!-- SCREEN 4: CONFIRMATION -->
-  <div class="screen" id="s4">
-    <h2>จองเสร็จแล้ว 🎉</h2>
-    <div class="confirm-circle">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:6px">รหัสการจอง</div>
-      <div class="code" id="cCode">—</div>
-    </div>
-    <div class="card">
-      <div class="row"><span>Confirm spot</span><span id="cSpot">—</span></div>
-      <div class="row"><span>Date</span><span id="cDate">—</span></div>
-      <div class="row"><span>Time</span><span id="cTime">—</span></div>
-    </div>
-    <p class="sub" style="text-align:center">Thank you!! 🙏</p>
-    <button class="btn-ghost" id="btnHome">กลับหน้าแรก</button>
+  <div class="app-container">
+
+    <!-- SCREEN 1: หน้าแรก (HOME) -->
+    <section class="screen active" id="s1">
+      <header class="app-header">
+        <div class="brand">
+          <div class="logo-box">🅿️</div>
+          <div>
+            <h1>Find Me Parking</h1>
+            <p class="sub">ระบบค้นหาและจองที่จอดรถอัจฉริยะ</p>
+          </div>
+        </div>
+      </header>
+
+      <!-- การ์ดแสดงการจองปัจจุบัน (จะแสดงอัตโนมัติถ้ามีจองค้างไว้) -->
+      <div class="card active-booking-card" id="homeActiveBooking" style="display:none">
+        <div class="card-badge">🟢 กำลังใช้งานอยู่</div>
+        <div class="booking-brief">
+          <div>
+            <div class="brief-title" id="briefSpot">A1 - A1-1</div>
+            <div class="brief-sub" id="briefTime">วันนี้ • 10.00 - 12.00</div>
+          </div>
+          <button class="btn-sm-action" id="btnViewCurrentBooking">ดูตั๋ว / ยกเลิก</button>
+        </div>
+      </div>
+
+      <!-- กล่องสแกนตำแหน่ง -->
+      <div class="hero-box">
+        <div class="radar-pulse">
+          <div class="pulse-ring"></div>
+          <span class="radar-icon">📍</span>
+        </div>
+        <h3>ค้นหาที่จอดที่ใกล้ที่สุด</h3>
+        <p id="locStatus" class="loc-text">ระบบจะคำนวณตำแหน่งและแนะนำช่องจอดที่ดีที่สุดให้คุณ</p>
+        <button class="btn-primary" id="btnLocate">
+          <span>สแกนหาที่จอดทันที</span>
+        </button>
+      </div>
+
+      <!-- แนะนำที่ว่างจากการสแกน -->
+      <div class="card suggest-card" id="suggestCard" style="display:none">
+        <div class="suggest-badge">✨ แนะนำสำหรับคุณ</div>
+        <h2 id="suggestText">ลานจอด A1 — ช่อง A1-1</h2>
+        <p class="suggest-sub">มีระยะเดินใกล้ทางเข้าอาคารมากที่สุด</p>
+        <button class="btn-accent" id="goToSuggested">จองช่องนี้เลย</button>
+      </div>
+
+      <div class="action-grid">
+        <button class="btn-card" id="btnBrowse">
+          <span class="icon">🗺️</span>
+          <div>
+            <strong>ดูผังลานจอดทั้งหมด</strong>
+            <small>เลือกดูชั้น A1, B1 อิสระ</small>
+          </div>
+        </button>
+        <button class="btn-card" id="btnOpenLookup">
+          <span class="icon">🔍</span>
+          <div>
+            <strong>ค้นหา / ยกเลิกการจอง</strong>
+            <small>ตรวจสอบด้วยรหัสการจอง</small>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- SCREEN 2: ผังลานจอดรถ (FLOOR GRID) -->
+    <section class="screen" id="s2">
+      <div class="top-nav">
+        <button class="back-btn" data-back="s1">❮</button>
+        <h2>เลือกช่องจอดรถ</h2>
+      </div>
+
+      <div class="floor-pill-group">
+        <button class="floor-pill active" data-lot="A1">ชั้น A1 <span class="slot-count" id="countA1">-</span></button>
+        <button class="floor-pill" data-lot="B1">ชั้น B1 <span class="slot-count" id="countB1">-</span></button>
+      </div>
+
+      <div class="status-legend">
+        <span><span class="dot free"></span> ว่าง</span>
+        <span><span class="dot taken"></span> มีรถจอด</span>
+        <span><span class="dot selected"></span> ที่เลือก</span>
+      </div>
+
+      <div class="lot-map-container">
+        <div class="road-lane">↑ เลนขับรถเข้า ↑</div>
+        <div class="grid" id="spotGrid"></div>
+      </div>
+
+      <div class="status-msg" id="gridStatus"></div>
+      <button class="btn-secondary" id="btnRefresh">🔄 รีเฟรชสถานะสด</button>
+    </section>
+
+    <!-- SCREEN 3: ฟอร์มระบุเวลาจอง (BOOKING FORM) -->
+    <section class="screen" id="s3">
+      <div class="top-nav">
+        <button class="back-btn" data-back="s2">❮</button>
+        <h2>รายละเอียดการจอง</h2>
+      </div>
+
+      <div class="card selected-spot-summary">
+        <span class="tag">ช่องที่คุณเลือก</span>
+        <h1 id="fLotSpotLabel">A1 - A1-1</h1>
+        <input type="hidden" id="fLotSpot">
+      </div>
+
+      <div class="card form-card">
+        <div class="field">
+          <label>📅 วันที่ต้องการจอด</label>
+          <input type="date" id="fDate" class="custom-input">
+        </div>
+
+        <div class="field">
+          <label>⏰ ช่วงเวลาจอดรถ</label>
+          <div class="time-chips">
+            <button type="button" class="time-chip active" data-time="08.00 - 10.00">08.00 - 10.00</button>
+            <button type="button" class="time-chip" data-time="10.00 - 12.00">10.00 - 12.00</button>
+            <button type="button" class="time-chip" data-time="12.00 - 14.00">12.00 - 14.00</button>
+            <button type="button" class="time-chip" data-time="14.00 - 16.00">14.00 - 16.00</button>
+            <button type="button" class="time-chip" data-time="16.00 - 18.00">16.00 - 18.00</button>
+          </div>
+          <input type="hidden" id="fTime" value="08.00 - 10.00">
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btnBook">ยืนยันการจองทันที</button>
+      <div class="status-msg" id="bookStatus"></div>
+    </section>
+
+    <!-- SCREEN 4: บัตรยืนยันการจอง (CONFIRMATION TICKET) -->
+    <section class="screen" id="s4">
+      <div class="ticket">
+        <div class="ticket-header">
+          <div class="success-icon">✓</div>
+          <h2>จองสำเร็จแล้ว!</h2>
+          <p>กรุณาแสดงรหัสนี้เมื่อเข้าจอด</p>
+        </div>
+
+        <div class="ticket-code-box">
+          <span class="code-title">รหัสการจอง (BOOKING PASS)</span>
+          <div class="code-number" id="cCode">—</div>
+          <button class="copy-badge" id="btnCopyCode">📋 คัดลอกรหัส</button>
+        </div>
+
+        <div class="ticket-cutline">
+          <div class="cutline-left"></div>
+          <div class="cutline-line"></div>
+          <div class="cutline-right"></div>
+        </div>
+
+        <div class="ticket-body">
+          <div class="ticket-row">
+            <span>ช่องจอด</span>
+            <strong id="cSpot">—</strong>
+          </div>
+          <div class="ticket-row">
+            <span>วันที่</span>
+            <strong id="cDate">—</strong>
+          </div>
+          <div class="ticket-row">
+            <span>ช่วงเวลา</span>
+            <strong id="cTime">—</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- ปุ่มยกเลิกการจอง -->
+      <button class="btn-danger-outline" id="btnCancelFromTicket">❌ ยกเลิกการจองนี้</button>
+      <button class="btn-ghost" id="btnHome" style="margin-top: 10px;">กลับหน้าแรก</button>
+    </section>
+
+    <!-- SCREEN 5: ตรวจสอบหรือยกเลิกการจองด้วยรหัส (LOOKUP / CANCEL) -->
+    <section class="screen" id="s5">
+      <div class="top-nav">
+        <button class="back-btn" data-back="s1">❮</button>
+        <h2>จัดการการจอง</h2>
+      </div>
+
+      <div class="card">
+        <label>ป้อนรหัสการจองของคุณ</label>
+        <input type="text" id="inputLookupCode" class="custom-input" placeholder="เช่น PK-260928-1234">
+        <button class="btn-primary" id="btnDoLookup" style="margin-top: 12px;">ค้นหาข้อมูล</button>
+      </div>
+
+      <div class="card lookup-result" id="lookupResultCard" style="display:none">
+        <div class="card-badge">ข้อมูลการจอง</div>
+        <h3 id="lookupSpot">ลานจอด A1 — ช่อง A1-1</h3>
+        <p id="lookupDetails" class="sub" style="margin-bottom: 16px;">วันที่ - | เวลา -</p>
+        <button class="btn-danger" id="btnCancelFromLookup">ยกเลิกการจองนี้</button>
+      </div>
+      <div class="status-msg" id="lookupStatus"></div>
+    </section>
+
   </div>
 
-  <!-- เชื่อมต่อไฟล์ JS -->
   <script src="script.js"></script>
 </body>
 </html>
