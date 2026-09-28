@@ -30,7 +30,7 @@ function showToast(message) {
   setTimeout(() => toast.classList.remove("show"), 2800);
 }
 
-// --- โหลดตั๋วค้างใน LocalStorage ---
+// --- ตรวจสอบตั๋วที่บันทึกไว้ในเครื่อง (LocalStorage) ---
 function checkSavedBooking() {
   const saved = localStorage.getItem("parking_booking");
   const card = document.getElementById("homeActiveBooking");
@@ -49,7 +49,7 @@ function checkSavedBooking() {
   }
 }
 
-// ดูตั๋วจากหน้าแรก
+// ดูตั๋วปัจจุบันจากหน้าแรก
 document.getElementById("btnViewCurrentBooking").onclick = () => {
   if (!state.currentBooking) return;
   displayTicket(state.currentBooking);
@@ -109,7 +109,7 @@ function selectSpot(spotId) {
   showScreen("s3");
 }
 
-// เลือกลานจอด
+// สลับแถบชั้นลานจอดรถ
 document.querySelectorAll(".floor-pill").forEach(tab => {
   tab.onclick = () => {
     document.querySelectorAll(".floor-pill").forEach(t => t.classList.remove("active"));
@@ -216,11 +216,11 @@ document.getElementById("btnBook").onclick = async () => {
         date,
         time
       };
-      // บันทึกตั๋วลงเครื่อง
+      // บันทึกตั๋วลงเครื่อง LocalStorage
       localStorage.setItem("parking_booking", JSON.stringify(bookingData));
       state.currentBooking = bookingData;
       displayTicket(bookingData);
-      showToast("จองที่จอดรถสำเร็จ!");
+      showToast("🎉 จองที่จอดรถสำเร็จ!");
     } else {
       statusEl.textContent = "❌ " + (data.error || "จองไม่สำเร็จ ช่องนี้อาจเพิ่งถูกจองไป");
     }
@@ -241,14 +241,19 @@ function displayTicket(data) {
 // คัดลอกรหัสตั๋ว
 document.getElementById("btnCopyCode").onclick = () => {
   const code = document.getElementById("cCode").textContent;
+  if (!code || code === "—") return;
   navigator.clipboard.writeText(code);
-  showToast("คัดลอกรหัสเรียบร้อยแล้ว");
+  showToast("📋 คัดลอกรหัสเรียบร้อยแล้ว");
 };
 
 // --- ระบบยกเลิกการจอง (Cancellation System) ---
 const cancelModal = document.getElementById("cancelModal");
 
 function openCancelModal(bookingCode) {
+  if (!bookingCode || bookingCode === "—") {
+    showToast("ไม่พบรหัสการจอง");
+    return;
+  }
   state.pendingCancelCode = bookingCode;
   cancelModal.classList.add("active");
 }
@@ -258,7 +263,7 @@ document.getElementById("btnCancelModalClose").onclick = () => {
   state.pendingCancelCode = null;
 };
 
-// กดจากหน้าตั๋ว
+// กดยกเลิกจากหน้าตั๋ว
 document.getElementById("btnCancelFromTicket").onclick = () => {
   const code = document.getElementById("cCode").textContent;
   openCancelModal(code);
@@ -267,7 +272,7 @@ document.getElementById("btnCancelFromTicket").onclick = () => {
 // ยืนยันยกเลิกใน Modal
 document.getElementById("btnConfirmCancel").onclick = async () => {
   const code = state.pendingCancelCode;
-  if (!code) return;
+  if (!code || code === "—") return;
 
   const btnConfirm = document.getElementById("btnConfirmCancel");
   btnConfirm.textContent = "กำลังยกเลิก...";
@@ -288,10 +293,15 @@ document.getElementById("btnConfirmCancel").onclick = async () => {
     cancelModal.classList.remove("active");
 
     if (data.success) {
-      localStorage.removeItem("parking_booking");
-      state.currentBooking = null;
-      showToast("ยกเลิกการจองสำเร็จ");
+      // ลบจากเครื่องเฉพาะเมื่อรหัสตรงกับตั๋วของเครื่องนี้
+      if (state.currentBooking && state.currentBooking.bookingCode === code) {
+        localStorage.removeItem("parking_booking");
+        state.currentBooking = null;
+      }
+      
+      showToast("✅ ยกเลิกการจองเรียบร้อยแล้ว");
       checkSavedBooking();
+      fetchSpots(); // รีเฟรชผังช่องจอดใหม่ทันที
       showScreen("s1");
     } else {
       showToast("❌ " + (data.error || "ไม่สามารถยกเลิกได้"));
@@ -330,7 +340,6 @@ document.getElementById("btnDoLookup").onclick = () => {
     resultCard.style.display = "block";
     statusEl.textContent = "";
   } else {
-    // ให้สามารถยกเลิกผ่านรหัสนี้ได้เลย
     document.getElementById("lookupSpot").textContent = `รหัสการจอง: ${code}`;
     document.getElementById("lookupDetails").textContent = "พร้อมดำเนินการยกเลิก";
     resultCard.style.display = "block";
@@ -348,11 +357,13 @@ document.getElementById("btnHome").onclick = () => {
   showScreen("s1");
 };
 
-// ตั้งค่าวันที่เริ่มต้นเป็น "วันนี้" อัตโนมัติ
+// ตั้งค่าเริ่มต้นเมื่อเปิดหน้าเว็บ
 window.addEventListener("DOMContentLoaded", () => {
   const today = new Date().toISOString().split("T")[0];
   const dateInput = document.getElementById("fDate");
-  dateInput.value = today;
-  dateInput.min = today;
+  if (dateInput) {
+    dateInput.value = today;
+    dateInput.min = today;
+  }
   checkSavedBooking();
 });
