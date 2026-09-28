@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Find Me ที่จอดรถ</title>
+<style>
+  :root{
+    --green:#22c55e; --red:#ef4444; --blue:#2563eb; --bg:#f8fafc; --card:#ffffff; --text:#0f172a; --muted:#64748b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+  .screen{display:none;min-height:100vh;padding:24px 20px 60px;max-width:480px;margin:0 auto;flex-direction:column}
+  .screen.active{display:flex}
+  h1{font-size:22px;margin:8px 0 4px}
+  h2{font-size:18px;margin:0 0 16px;text-align:center}
+  p.sub{color:var(--muted);font-size:14px;margin-top:0}
+  .card{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.06);margin-bottom:14px}
+  button{cursor:pointer;border:none;border-radius:10px;font-size:15px;font-weight:600;padding:14px;width:100%}
+  .btn-primary{background:var(--blue);color:#fff}
+  .btn-primary:disabled{background:#94a3b8;cursor:not-allowed}
+  .btn-ghost{background:#eef2ff;color:var(--blue)}
+  select,input{width:100%;padding:12px;border-radius:10px;border:1px solid #e2e8f0;font-size:15px;background:#fff}
+  label{font-size:13px;color:var(--muted);display:block;margin-bottom:4px}
+  .field{margin-bottom:14px}
+  .lots{display:flex;gap:8px;margin-bottom:14px}
+  .lot-tab{flex:1;text-align:center;padding:10px;border-radius:10px;background:#eef2ff;color:var(--blue);font-weight:600;cursor:pointer}
+  .lot-tab.active{background:var(--blue);color:#fff}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .spot{aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;border:2px solid;cursor:pointer;user-select:none}
+  .spot.free{border-color:var(--green);color:var(--green);background:#f0fdf4}
+  .spot.taken{border-color:var(--red);color:var(--red);background:#fef2f2;cursor:not-allowed;opacity:.6}
+  .spot.selected{background:var(--green);color:#fff}
+  .legend{display:flex;gap:16px;font-size:13px;color:var(--muted);margin-bottom:10px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .back{font-size:20px;background:none;width:auto;padding:4px 8px;color:var(--text)}
+  .confirm-circle{border:2px solid var(--blue);border-radius:50%;padding:36px 20px;text-align:center;margin:10px 0 24px}
+  .confirm-circle .code{font-size:26px;font-weight:700;color:var(--blue);letter-spacing:1px}
+  .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:14px}
+  .row span:first-child{color:var(--muted)}
+  .status{font-size:13px;color:var(--muted);text-align:center;margin-top:8px}
+  .loc-box{background:#eef2ff;border-radius:12px;padding:16px;text-align:center;margin-bottom:16px}
+  .stars{font-size:12px;color:var(--blue)}
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: HOME / FIND ME -->
+<div class="screen active" id="s1">
+  <h1>Find Me ที่จอดรถ 🅿️</h1>
+  <p class="sub">หาที่จอดรถว่างในมหาวิทยาลัยแบบเรียลไทม์</p>
+  <div class="loc-box">
+    <div id="locStatus">กดปุ่มด้านล่างเพื่อค้นหาที่จอดที่ใกล้ตำแหน่งคุณที่สุด</div>
+  </div>
+  <div class="card" id="suggestCard" style="display:none">
+    <label>ที่ว่างแนะนำ</label>
+    <h2 id="suggestText" style="text-align:left"></h2>
+    <button class="btn-primary" id="goToSuggested">เลือกที่จอดนี้</button>
+  </div>
+  <button class="btn-primary" id="btnLocate" style="margin-bottom:10px">📍 เปิดตำแหน่ง</button>
+  <button class="btn-ghost" id="btnBrowse">ดูผังที่จอดทั้งหมด</button>
+</div>
+
+<!-- SCREEN 2: FLOOR GRID -->
+<div class="screen" id="s2">
+  <div class="top"><button class="back" data-back="s1">←</button><h2 style="margin:0">เลือกที่จอดที่ใกล้ที่สุด</h2></div>
+  <div class="lots">
+    <div class="lot-tab active" data-lot="A1">ชั้น A1</div>
+    <div class="lot-tab" data-lot="B1">ชั้น B1</div>
+  </div>
+  <div class="legend">
+    <span><span class="dot" style="background:var(--green)"></span>ว่าง</span>
+    <span><span class="dot" style="background:var(--red)"></span>เต็ม</span>
+  </div>
+  <div class="grid" id="spotGrid"></div>
+  <div class="status" id="gridStatus"></div>
+  <button class="btn-ghost" id="btnRefresh" style="margin-top:16px">🔄 รีเฟรช</button>
+</div>
+
+<!-- SCREEN 3: BOOKING FORM -->
+<div class="screen" id="s3">
+  <div class="top"><button class="back" data-back="s2">←</button><h2 style="margin:0">เลือกพื้นที่จอด</h2></div>
+  <div class="card">
+    <div class="field"><label>ลานจอดที่จอง</label><input id="fLotSpot" readonly></div>
+    <div class="field"><label>เวลาที่จอง</label>
+      <select id="fTime">
+        <option>08.00 - 10.00</option>
+        <option>10.00 - 12.00</option>
+        <option>12.00 - 14.00</option>
+        <option>14.00 - 16.00</option>
+        <option>16.00 - 18.00</option>
+      </select>
+    </div>
+    <div class="field"><label>วันที่จอง</label><input type="date" id="fDate"></div>
+  </div>
+  <button class="btn-primary" id="btnBook">จองทันที</button>
+  <div class="status" id="bookStatus"></div>
+</div>
+
+<!-- SCREEN 4: CONFIRMATION -->
+<div class="screen" id="s4">
+  <h2>จองเสร็จแล้ว 🎉</h2>
+  <div class="confirm-circle">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:6px">รหัสการจอง</div>
+    <div class="code" id="cCode">—</div>
+  </div>
+  <div class="card">
+    <div class="row"><span>Confirm spot</span><span id="cSpot">—</span></div>
+    <div class="row"><span>Date</span><span id="cDate">—</span></div>
+    <div class="row"><span>Time</span><span id="cTime">—</span></div>
+  </div>
+  <p class="sub" style="text-align:center">Thank you!! 🙏</p>
+  <button class="btn-ghost" id="btnHome">กลับหน้าแรก</button>
+</div>
+
+<script>
+/* ====== CONFIGURE THIS: your deployed Google Apps Script Web App URL ====== */
+const API_BASE_URL = "https://script.google.com/macros/s/AKfycbzOMYM-tWQKwMIiccUZh6Y3TG3I3DsTHnBtdCh8xGEO1yuGukUfiHrkatw0DpVbsIgJ0w/exec";
+/* =========================================================================== */
+
+let state = { lot: "A1", spot: null, spots: {} };
+
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+document.querySelectorAll("[data-back]").forEach(b=>{
+  b.onclick = ()=> showScreen(b.dataset.back);
+});
+
+// ---- Fetch spot statuses from backend ----
+async function fetchSpots(){
+  document.getElementById("gridStatus").textContent = "กำลังโหลด...";
+  try{
+    const res = await fetch(`${API_BASE_URL}?action=spots`);
+    const data = await res.json();
+    state.spots = data; // { A1: [{id:'A1-1',status:'free'}, ...], B1: [...] }
+    renderGrid();
+    document.getElementById("gridStatus").textContent = "";
+  }catch(e){
+    document.getElementById("gridStatus").textContent = "⚠️ เชื่อมต่อฐานข้อมูลไม่ได้ (ตรวจสอบ API_BASE_URL)";
+  }
+}
+
+function renderGrid(){
+  const grid = document.getElementById("spotGrid");
+  grid.innerHTML = "";
+  const list = state.spots[state.lot] || [];
+  list.forEach(sp=>{
+    const el = document.createElement("div");
+    el.className = "spot " + (sp.status === "free" ? "free" : "taken");
+    el.textContent = sp.id;
+    if(sp.status === "free"){
+      el.onclick = ()=> selectSpot(sp.id);
+    }
+    grid.appendChild(el);
+  });
+}
+
+function selectSpot(spotId){
+  state.spot = spotId;
+  document.getElementById("fLotSpot").value = `ลานจอด ${state.lot} — ช่อง ${spotId}`;
+  showScreen("s3");
+}
+
+document.querySelectorAll(".lot-tab").forEach(tab=>{
+  tab.onclick = ()=>{
+    document.querySelectorAll(".lot-tab").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    state.lot = tab.dataset.lot;
+    renderGrid();
+  };
+});
+document.getElementById("btnRefresh").onclick = fetchSpots;
+document.getElementById("btnBrowse").onclick = ()=>{ showScreen("s2"); fetchSpots(); };
+
+// ---- Home screen: geolocation + suggest nearest free spot ----
+document.getElementById("btnLocate").onclick = async ()=>{
+  const statusEl = document.getElementById("locStatus");
+  if(!navigator.geolocation){
+    statusEl.textContent = "อุปกรณ์นี้ไม่รองรับการระบุตำแหน่ง";
+    return;
+  }
+  statusEl.textContent = "กำลังค้นหาตำแหน่งของคุณ...";
+  navigator.geolocation.getCurrentPosition(async ()=>{
+    // Simplified: real distance calc needs lot coordinates in the sheet.
+    // For now we recommend the lot/spot with the most availability.
+    await fetchSpots();
+    let best = null;
+    for(const lot in state.spots){
+      const free = state.spots[lot].find(s=>s.status==="free");
+      if(free){ best = {lot, spot: free.id}; break; }
+    }
+    if(best){
+      state.lot = best.lot; state.spot = best.spot;
+      statusEl.textContent = "พบที่จอดใกล้ตำแหน่งคุณแล้ว ✅";
+      document.getElementById("suggestCard").style.display = "block";
+      document.getElementById("suggestText").textContent = `ลานจอด ${best.lot} — ช่อง ${best.spot}`;
+    } else {
+      statusEl.textContent = "ไม่มีที่ว่างในขณะนี้ ลองรีเฟรชอีกครั้ง";
+    }
+  }, ()=>{
+    statusEl.textContent = "ไม่สามารถเข้าถึงตำแหน่งได้ กรุณาอนุญาตการเข้าถึงตำแหน่ง";
+  });
+};
+document.getElementById("goToSuggested").onclick = ()=>{
+  document.getElementById("fLotSpot").value = `ลานจอด ${state.lot} — ช่อง ${state.spot}`;
+  showScreen("s3");
+};
+
+// ---- Booking ----
+document.getElementById("btnBook").onclick = async ()=>{
+  const date = document.getElementById("fDate").value;
+  const time = document.getElementById("fTime").value;
+  const statusEl = document.getElementById("bookStatus");
+  if(!date){ statusEl.textContent = "กรุณาเลือกวันที่"; return; }
+  if(!state.spot){ statusEl.textContent = "กรุณาเลือกช่องจอดก่อน"; return; }
+  statusEl.textContent = "กำลังบันทึกการจอง...";
+  try{
+    // Sent as text/plain to avoid CORS preflight against Apps Script.
+    const res = await fetch(API_BASE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ lot: state.lot, spot: state.spot, date, time })
+    });
+    const data = await res.json();
+    if(data.success){
+      document.getElementById("cCode").textContent = data.bookingCode;
+      document.getElementById("cSpot").textContent = `${state.lot} - ${state.spot}`;
+      document.getElementById("cDate").textContent = date;
+      document.getElementById("cTime").textContent = time;
+      showScreen("s4");
+    } else {
+      statusEl.textContent = "❌ " + (data.error || "จองไม่สำเร็จ ช่องนี้อาจถูกจองไปแล้ว");
+    }
+  }catch(e){
+    statusEl.textContent = "⚠️ เชื่อมต่อฐานข้อมูลไม่ได้ (ตรวจสอบ API_BASE_URL)";
+  }
+};
+
+document.getElementById("btnHome").onclick = ()=>{
+  state = { lot:"A1", spot:null, spots:{} };
+  document.getElementById("suggestCard").style.display = "none";
+  document.getElementById("locStatus").textContent = "กดปุ่มด้านล่างเพื่อค้นหาที่จอดที่ใกล้ตำแหน่งคุณที่สุด";
+  showScreen("s1");
+};
+</script>
+</body>
+</html>
