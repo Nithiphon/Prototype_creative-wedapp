@@ -12,19 +12,8 @@
 </head>
 <body>
 
-  <!-- Toast Notification -->
+  <!-- Toast แจ้งเตือนข้อความ -->
   <div id="toast" class="toast"></div>
-
-  <!-- Modal ข้อมูลช่องจอดเมื่อกดเลือก -->
-  <div id="spotModal" class="modal-overlay">
-    <div class="modal-box">
-      <div class="modal-icon" id="modalIcon">🚗</div>
-      <h3 id="modalTitle">ช่อง A1-1</h3>
-      <div id="modalStatusBadge" class="status-chip free">สถานะ: ว่าง</div>
-      <p id="modalDesc">ช่องนี้พร้อมให้คุณนำรถเข้าจอดได้ทันที</p>
-      <button class="btn-primary" id="btnModalClose">ตกลง</button>
-    </div>
-  </div>
 
   <div class="app-container">
 
@@ -35,84 +24,157 @@
           <div class="logo-box">🅿️</div>
           <div>
             <h1>Find Me Parking</h1>
-            <p class="sub">เช็กสถานะที่จอดรถว่างแบบเรียลไทม์</p>
+            <p class="sub">ระบบค้นหาและจองที่จอดรถอัจฉริยะ</p>
           </div>
         </div>
       </header>
 
-      <!-- สรุปภาพรวมช่องว่างทั้งหมด -->
-      <div class="card summary-card">
-        <div class="summary-item">
-          <span class="summary-label">ที่จอดว่างทั้งหมด</span>
-          <strong class="summary-value" id="totalFreeCount">-</strong>
-        </div>
-        <div class="summary-divider"></div>
-        <div class="summary-item">
-          <span class="summary-label">สถานะปัจจุบัน</span>
-          <span class="live-dot-container">
-            <span class="live-dot"></span> สดจากระบบ
-          </span>
+      <!-- การ์ดแสดงตั๋วปัจจุบัน (แสดงเมื่อมีการจองไว้) -->
+      <div class="card active-booking-card" id="homeActiveBooking" style="display:none">
+        <div class="card-badge">🟢 ตั๋วการจองล่าสุดของคุณ</div>
+        <div class="booking-brief">
+          <div>
+            <div class="brief-title" id="briefSpot">A1 - A1-1</div>
+            <div class="brief-sub" id="briefTime">วันนี้ • 10.00 - 12.00</div>
+          </div>
+          <button class="btn-sm-action" id="btnViewCurrentBooking">ดูตั๋ว</button>
         </div>
       </div>
 
-      <!-- กล่องสแกน GPS -->
+      <!-- กล่องสแกนหาที่จอดใกล้สุด -->
       <div class="hero-box">
         <div class="radar-pulse">
           <div class="pulse-ring"></div>
           <span class="radar-icon">📍</span>
         </div>
         <h3>ค้นหาที่จอดที่ใกล้ที่สุด</h3>
-        <p id="locStatus" class="loc-text">กดปุ่มด้านล่างเพื่อค้นหาช่องจอดที่สะดวกที่สุดสำหรับคุณ</p>
+        <p id="locStatus" class="loc-text">ระบบจะแนะนำช่องจอดที่ว่างและใกล้คุณที่สุด</p>
         <button class="btn-primary" id="btnLocate">
-          <span>📍 สแกนหาช่องว่างใกล้ตัว</span>
+          <span>สแกนหาที่จอดทันที</span>
         </button>
       </div>
 
-      <!-- การ์ดแสดงผลเมื่อสแกนเจอช่องว่าง -->
+      <!-- แนะนำที่ว่างจากการสแกน -->
       <div class="card suggest-card" id="suggestCard" style="display:none">
-        <div class="suggest-badge">✨ พบช่องว่างแนะนำ</div>
+        <div class="suggest-badge">✨ แนะนำสำหรับคุณ</div>
         <h2 id="suggestText">ลานจอด A1 — ช่อง A1-1</h2>
-        <p class="suggest-sub">ช่องนี้สะดวกและเดินเข้าอาคารได้ใกล้ที่สุด</p>
-        <button class="btn-accent" id="goToSuggested">ดูตำแหน่งบนผัง</button>
+        <p class="suggest-sub">มีระยะเดินใกล้ทางเข้าอาคารมากที่สุด</p>
+        <button class="btn-accent" id="goToSuggested">เลือกจองช่องนี้</button>
       </div>
 
-      <!-- ปุ่มเปิดดูผังทั้งหมด -->
-      <button class="btn-card" id="btnBrowse">
-        <span class="icon">🗺️</span>
-        <div>
-          <strong>ดูผังลานจอดรถทั้งหมด</strong>
-          <small>เช็กช่องว่างแยกตามชั้น A1, B1</small>
-        </div>
-      </button>
+      <!-- ปุ่มดูผังทั้งหมด -->
+      <div class="action-grid">
+        <button class="btn-card" id="btnBrowse">
+          <span class="icon">🗺️</span>
+          <div>
+            <strong>ดูผังลานจอดทั้งหมด</strong>
+            <small>เลือกดูช่องจอดชั้น A1, B1 อิสระ</small>
+          </div>
+        </button>
+      </div>
     </section>
 
     <!-- SCREEN 2: ผังลานจอดรถ (FLOOR GRID) -->
     <section class="screen" id="s2">
       <div class="top-nav">
         <button class="back-btn" data-back="s1">❮</button>
-        <h2>ผังแสดงช่องจอดรถ</h2>
+        <h2>เลือกช่องจอดรถ</h2>
       </div>
 
-      <!-- แถบเลือกชั้น -->
       <div class="floor-pill-group">
         <button class="floor-pill active" data-lot="A1">ชั้น A1 <span class="slot-count" id="countA1">-</span></button>
         <button class="floor-pill" data-lot="B1">ชั้น B1 <span class="slot-count" id="countB1">-</span></button>
       </div>
 
-      <!-- คำอธิบายสี -->
       <div class="status-legend">
-        <span><span class="dot free"></span> ว่าง (จอดได้)</span>
+        <span><span class="dot free"></span> ว่าง</span>
         <span><span class="dot taken"></span> มีรถจอด</span>
+        <span><span class="dot selected"></span> ที่เลือก</span>
       </div>
 
-      <!-- แผนผังลานจอด -->
       <div class="lot-map-container">
-        <div class="road-lane">↑ ทางขับรถเข้า ↑</div>
+        <div class="road-lane">↑ เลนขับรถเข้า ↑</div>
         <div class="grid" id="spotGrid"></div>
       </div>
 
       <div class="status-msg" id="gridStatus"></div>
-      <button class="btn-secondary" id="btnRefresh">🔄 รีเฟรชสถานะใหม่</button>
+      <button class="btn-secondary" id="btnRefresh">🔄 รีเฟรชสถานะสด</button>
+    </section>
+
+    <!-- SCREEN 3: ฟอร์มระบุเวลาจอง (BOOKING FORM) -->
+    <section class="screen" id="s3">
+      <div class="top-nav">
+        <button class="back-btn" data-back="s2">❮</button>
+        <h2>รายละเอียดการจอง</h2>
+      </div>
+
+      <div class="card selected-spot-summary">
+        <span class="tag">ช่องที่คุณเลือก</span>
+        <h1 id="fLotSpotLabel">A1 - A1-1</h1>
+        <input type="hidden" id="fLotSpot">
+      </div>
+
+      <div class="card form-card">
+        <div class="field">
+          <label>📅 วันที่ต้องการจอด</label>
+          <input type="date" id="fDate" class="custom-input">
+        </div>
+
+        <div class="field">
+          <label>⏰ ช่วงเวลาจอดรถ</label>
+          <div class="time-chips">
+            <button type="button" class="time-chip active" data-time="08.00 - 10.00">08.00 - 10.00</button>
+            <button type="button" class="time-chip" data-time="10.00 - 12.00">10.00 - 12.00</button>
+            <button type="button" class="time-chip" data-time="12.00 - 14.00">12.00 - 14.00</button>
+            <button type="button" class="time-chip" data-time="14.00 - 16.00">14.00 - 16.00</button>
+            <button type="button" class="time-chip" data-time="16.00 - 18.00">16.00 - 18.00</button>
+          </div>
+          <input type="hidden" id="fTime" value="08.00 - 10.00">
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btnBook">ยืนยันการจองทันที</button>
+      <div class="status-msg" id="bookStatus"></div>
+    </section>
+
+    <!-- SCREEN 4: บัตรยืนยันการจอง (CONFIRMATION TICKET) -->
+    <section class="screen" id="s4">
+      <div class="ticket">
+        <div class="ticket-header">
+          <div class="success-icon">✓</div>
+          <h2>จองสำเร็จแล้ว!</h2>
+          <p>กรุณาแสดงรหัสนี้เมื่อเข้าจอด</p>
+        </div>
+
+        <div class="ticket-code-box">
+          <span class="code-title">รหัสการจอง (BOOKING PASS)</span>
+          <div class="code-number" id="cCode">—</div>
+          <button class="copy-badge" id="btnCopyCode">📋 คัดลอกรหัส</button>
+        </div>
+
+        <div class="ticket-cutline">
+          <div class="cutline-left"></div>
+          <div class="cutline-line"></div>
+          <div class="cutline-right"></div>
+        </div>
+
+        <div class="ticket-body">
+          <div class="ticket-row">
+            <span>ช่องจอด</span>
+            <strong id="cSpot">—</strong>
+          </div>
+          <div class="ticket-row">
+            <span>วันที่</span>
+            <strong id="cDate">—</strong>
+          </div>
+          <div class="ticket-row">
+            <span>ช่วงเวลา</span>
+            <strong id="cTime">—</strong>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btnHome" style="margin-top: 24px;">กลับหน้าแรก</button>
     </section>
 
   </div>

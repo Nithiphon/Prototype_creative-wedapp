@@ -60,7 +60,7 @@ body {
 
 /* Header */
 .app-header {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .brand {
@@ -109,62 +109,11 @@ p.sub {
   box-shadow: var(--shadow-sm);
 }
 
-/* Summary Card */
-.summary-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  background: #f8fafc;
-  padding: 14px 20px;
-}
-
-.summary-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.summary-label {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.summary-value {
-  font-size: 24px;
-  color: var(--green);
-  font-weight: 700;
-}
-
-.summary-divider {
-  width: 1px;
-  height: 36px;
-  background: var(--border);
-}
-
-.live-dot-container {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--dark);
-}
-
-.live-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 0 3px rgba(16,185,129,0.2);
-}
-
-/* Hero Box */
 .hero-box {
   background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
   color: #fff;
   border-radius: var(--radius-lg);
-  padding: 26px 20px;
+  padding: 28px 20px;
   text-align: center;
   margin-bottom: 16px;
   box-shadow: var(--shadow-lg);
@@ -178,13 +127,13 @@ p.sub {
 .hero-box .loc-text {
   color: rgba(255,255,255,0.85);
   font-size: 13px;
-  margin: 0 0 18px;
+  margin: 0 0 20px;
 }
 
 .radar-pulse {
   position: relative;
-  width: 54px;
-  height: 54px;
+  width: 60px;
+  height: 60px;
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -192,7 +141,7 @@ p.sub {
 }
 
 .radar-icon {
-  font-size: 24px;
+  font-size: 26px;
   z-index: 2;
 }
 
@@ -201,13 +150,55 @@ p.sub {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.3);
   animation: pulse 2s infinite ease-out;
 }
 
 @keyframes pulse {
   0% { transform: scale(0.6); opacity: 0.9; }
   100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* Active Booking Floating Card */
+.active-booking-card {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 14px 16px;
+}
+
+.card-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #15803d;
+  margin-bottom: 6px;
+}
+
+.booking-brief {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.brief-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.brief-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.btn-sm-action {
+  background: #ffffff;
+  border: 1px solid #86efac;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 /* Suggestion Card */
@@ -229,20 +220,24 @@ p.sub {
   margin: 4px 0 14px;
 }
 
-/* Action Button */
+/* Action Card Button */
+.action-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
 .btn-card {
-  width: 100%;
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 16px 14px;
   display: flex;
   align-items: center;
   gap: 14px;
   text-align: left;
   cursor: pointer;
   transition: all 0.15s ease;
-  font-family: inherit;
 }
 
 .btn-card:active {
@@ -256,7 +251,7 @@ p.sub {
 
 .btn-card strong {
   display: block;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--dark);
 }
 
@@ -312,7 +307,7 @@ button {
   cursor: pointer;
 }
 
-/* Top Nav */
+/* Navigation Top */
 .top-nav {
   display: flex;
   align-items: center;
@@ -397,6 +392,7 @@ button {
 
 .dot.free { background: var(--green); }
 .dot.taken { background: var(--red); }
+.dot.selected { background: var(--primary); }
 
 /* Parking Lot Map */
 .lot-map-container {
@@ -424,14 +420,14 @@ button {
 }
 
 .spot {
-  aspect-ratio: 1.35;
+  aspect-ratio: 1.4;
   border-radius: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 15px;
+  font-size: 14px;
   border: 2px solid;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -440,7 +436,7 @@ button {
 
 .spot::before {
   content: '🚗';
-  font-size: 22px;
+  font-size: 20px;
   margin-bottom: 2px;
 }
 
@@ -454,8 +450,9 @@ button {
   opacity: 0.15;
 }
 
-.spot.free:active {
-  transform: scale(0.96);
+.spot.free:hover, .spot.free:active {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(16,185,129,0.2);
 }
 
 .spot.taken {
@@ -463,94 +460,178 @@ button {
   color: #ef4444;
   background: #fef2f2;
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.65;
 }
 
 .spot.taken::before {
-  opacity: 0.85;
+  opacity: 0.8;
   filter: grayscale(80%);
 }
 
-/* Spot Highlight Pulse (เมื่อนำทางมาจาก GPS) */
-.spot.highlight {
-  animation: highlightGlow 1.5s infinite alternate;
-  box-shadow: 0 0 15px rgba(37,99,235,0.6);
+.spot.selected {
+  background: var(--primary);
   border-color: var(--primary);
-  color: var(--primary);
+  color: #ffffff;
 }
 
-@keyframes highlightGlow {
-  from { transform: scale(1); }
-  to { transform: scale(1.04); }
+/* Time Chips & Inputs */
+.custom-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  margin-top: 6px;
 }
 
-/* Modal */
-.modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(15,23,42,0.6);
-  backdrop-filter: blur(4px);
-  z-index: 100;
+.time-chips {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.time-chip {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dark);
+  cursor: pointer;
+}
+
+.time-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.selected-spot-summary {
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  color: #fff;
+  border: none;
+}
+
+.selected-spot-summary .tag {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.selected-spot-summary h1 {
+  color: #fff;
+  font-size: 26px;
+  margin-top: 4px;
+}
+
+/* Ticket Receipt */
+.ticket {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.ticket-header {
+  background: var(--primary-light);
+  padding: 24px 20px;
+  text-align: center;
+}
+
+.success-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--green);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 24px;
+  margin: 0 auto 10px;
+}
+
+.ticket-header h2 {
+  color: var(--dark);
+  font-size: 20px;
+}
+
+.ticket-header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.ticket-code-box {
+  padding: 20px;
+  text-align: center;
+}
+
+.code-title {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.code-number {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--primary);
+  letter-spacing: 2px;
+  margin: 6px 0 12px;
+}
+
+.copy-badge {
+  background: #f1f5f9;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ticket-cutline {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.cutline-left, .cutline-right {
+  width: 20px;
+  height: 20px;
+  background: var(--bg);
+  border-radius: 50%;
+}
+
+.cutline-left { margin-left: -10px; }
+.cutline-right { margin-right: -10px; }
+
+.cutline-line {
+  flex: 1;
+  border-bottom: 2px dashed #e2e8f0;
+}
+
+.ticket-body {
   padding: 20px;
 }
 
-.modal-overlay.active {
+.ticket-row {
   display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  border-bottom: 1px solid #f8fafc;
 }
 
-.modal-box {
-  background: #fff;
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  max-width: 320px;
-  width: 100%;
-  text-align: center;
-  box-shadow: var(--shadow-lg);
-  animation: modalIn 0.2s ease-out;
-}
-
-@keyframes modalIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.modal-icon {
-  font-size: 38px;
-  margin-bottom: 6px;
-}
-
-.modal-box h3 {
-  margin: 0 0 10px;
-  font-size: 18px;
-}
-
-.status-chip {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 12px;
-}
-
-.status-chip.free {
-  background: var(--green-light);
-  color: var(--green);
-}
-
-.status-chip.taken {
-  background: var(--red-light);
-  color: var(--red);
-}
-
-.modal-box p {
-  font-size: 13px;
-  color: var(--muted);
-  margin: 0 0 18px;
-}
+.ticket-row span { color: var(--muted); }
+.ticket-row strong { color: var(--dark); }
 
 /* Toast */
 .toast {
